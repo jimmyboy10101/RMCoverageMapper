@@ -18,9 +18,10 @@
     SRTMPath = "C:\Radio_Mobile\Geodata\strm3\" Location of SRTM Data
 
     Required Improvements
-    -Create Multiple rows in CSV with different Gains (+5 , -5, -10) and colours
-    -Automatically launch radiomobile instances (1 per row in CSV)
     -Work on building Automation 
+    -Error Checking
+    -input validation
+    -Command help
 .Notes
     Author: Jim Catelli
     Creation date: 08/03/2021
