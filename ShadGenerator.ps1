@@ -22,6 +22,7 @@
     -Error Checking
     -input validation
     -Command help
+    -Preset Gain levels/Mast settings for different Repeaters/Vehicle/Handheld redios and antennas.
 .Notes
     Author: Jim Catelli
     Creation date: 08/03/2021
