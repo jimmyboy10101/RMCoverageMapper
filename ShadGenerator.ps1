@@ -19,13 +19,9 @@
 
     Required Improvements
     -Work on building Automation 
-    -Error Checking
-    -input validation
-    -Command help
-    -Preset Gain levels/Mast settings for different Repeaters/Vehicle/Handheld redios and antennas.
 .Notes
     Author: Jim Catelli
-    Creation date: 08/03/2022
+    Creation date: 08/03/2021
 #>
 
 
@@ -42,14 +38,16 @@ function Invoke-RMShadGenerator {
         $MobileAntennaHeight = 2,
         [PSDefaultValue(Help = 174)]
         $Freq = 174,
-        [PSDefaultValue(Help = 100)]
-        $Resolution = 100,
+        [PSDefaultValue(Help = 200)]
+        $Resolution = 200,
         [PSDefaultValue(Help = 50)]
         $Range = 50,
         [PSDefaultValue(Help = 'C:\Radio_Mobile\Geodata\strm3\')]
         [string]$SRTMPath = "C:\Radio_Mobile\Geodata\strm3\",
         [PSDefaultValue(Help = 'C:\Radio_Mobile\rmweng.exe')]
         [string]$RMPath = "C:\Radio_Mobile\rmweng.exe",
+        [PSDefaultValue(Help = 'False')]
+        [string]$Optomistic = "False",
     [Parameter(Mandatory)]
         [string]$JobName,
     [Parameter(Mandatory)]
@@ -59,32 +57,39 @@ function Invoke-RMShadGenerator {
     [Parameter(Mandatory)]
         $Lat
     )
-$GainLevels = @(
 
-    [PSCustomObject]@{
-        Level = 'Optimistic'
-        Value = $BaseGain + 5
-        Colour = "00ff00" #Green
-    }
+    $GainLevels = @(
 
-    [PSCustomObject]@{
-        Level = 'Baseline'
-        Value = $BaseGain
-        Colour = "0000ff" #Blue
-    }
-
-    [PSCustomObject]@{
-        Level = 'Realistic'
-        Value = $BaseGain - 5
-        Colour = "ff8000" #Orange
-    }
+        [PSCustomObject]@{
+            Level = '-Vehicle-Baseline'
+            Value = $BaseGain
+            Colour = "00ffff" #Yellow
+        }
     
-    [PSCustomObject]@{
-        Level = 'Pessimistic'
-        Value = $BaseGain - 10
-        Colour = "ff0000" #Red
+        [PSCustomObject]@{
+            Level = '-Vehicle-Realistic'
+            Value = $BaseGain - 5
+            Colour = "0080ff" #Orange
+        }
+        
+        [PSCustomObject]@{
+            Level = '-Handheld'
+            Value = $BaseGain - 10
+            Colour = "0000ff" #Red
+        }
+    )
+    
+    if ($Optomistic -eq "True") {
+    
+    $GainLevels +=@( 
+        
+        [PSCustomObject]@{
+        Level = '-Optimistic'
+        Value = $BaseGain + 5
+        Colour = "008000" #Pale Green
+        }
+    )
     }
-)
 
 $TXTPath = "$WorkingFolder$JobName.txt"
 
@@ -113,10 +118,40 @@ $Record = [ordered] @{
     PercentageVariability = 100
     }
     
-    New-Object  -TypeName PSCustomObject -Property $Record | Export-Csv -Delimiter "`t" -Path "$WorkingFolder$JobName.txt" -Append -usequotes never
+    New-Object  -TypeName PSCustomObject -Property $Record | Export-Csv -Delimiter "`t" -Path "$WorkingFolder$JobName.txt" -Append -NoTypeInformation
+    
+    #New-Object  -TypeName PSCustomObject -Property $Record | ConvertTo-Csv -notypeinformation -Delimiter "`t" | % {$_ -replace '"',''} | Out-File   -Path "$WorkingFolder$JobName.txt" -Append 
 }
+$OutputCSV = Get-Content "$WorkingFolder$JobName.txt"
+$OutputCSV |  % {$_ -replace '"',''} | Out-File "$WorkingFolder$JobName.txt" -Force -Confirm:$false -Encoding utf8
+
+
+
 ForEach($Gain in $GainLevels){
 Start-Process -FilePath $RMPath -WorkingDirectory "C:\Radio_Mobile\" -ArgumentList "$TXTPath"
 }
 
+#KML Generator.
+
+$KML = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Placemark>
+    <name>$JobName</name>
+    <description>$JobName Repeater Located at $Long,$Lat</description>
+    <Point>
+      <coordinates>$Long,$Lat,0</coordinates>
+    </Point>
+  </Placemark>
+</kml>
+"@
+
+New-Item  $WorkingFolder$JobName.kml
+Set-Content -Path $WorkingFolder$JobName.kml -Value $KML
+
 } 
+
+
+Invoke-RMShadGenerator -WorkingFolder C:\local\ -Long $Longitude -Lat $Latitude -JobName $Job
+
+Remove-Item .\ -Include "*$Jobname*" -Exclude "*.png, *.kml"
